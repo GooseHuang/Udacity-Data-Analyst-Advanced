@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>泰坦尼克号乘客生还情况图形展示</title>
+    <style>
+        .axis line,
+        .axis path {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+            stroke-width: 2
+        }
+        body {
+            position: relative;
+            margin: auto 15%;
+        }
+        header {
+            margin-left: 235px;
+        }
+        .note {
+            width:900px;
+            margin-top: 10px;
+            margin-left: 70px;
+            margin-bottom: 60px;
+        }
+    </style>
+  </head>
+
+<body>
+
+  <script src="//d3js.org/d3.v3.min.js"></script>
+
+  <header>
+  <h1>泰坦尼克号乘客生还情况展示</h1>
+</header>
+
+
+	<div id="chart1"></div>
+      <div class="note">
+        <h3>这张图展现了乘客的生还比例按照舱位等级变化的情况。从图中可以明显的看出，舱位等级越高的乘客，其生还几率越高，一等舱乘客生还率为64%，二等舱为47%，三等舱只有24%。<h3>
+      </div>
+
+
+	<div id="chart2"></div>
+      <div class="note">
+        <h3>这张图展现了乘客的生还比例按照年龄变化的情况。从图中可以明显的看出，青少年乘客（15岁以下）生还几率最高，达58%；成年乘客（15-60岁）中30-45岁的中年乘客生还比例几率最高,达42%，但与其他成年乘客差异较小；老年乘客（60岁以上）的生还几率最低，为27%。<h3>
+      </div>
+
+
+	<div id="chart3"></div>
+      <div class="note">
+        <h3>这张图展现了乘客的生还比例按照舱位等级和性别变化的情况。从图中可以看出，在每一个等级中，女性明显拥有更高的生还率；在每一种性别中，舱位等级越高，生还率越高；其中一等舱的女性拥有97%的生还率，而三等舱的男性生还率只有14%。<h3>
+      </div>
+
+
+  <script>
+
+  // 设置基础宽度
+  var margin = {top: 20, right: 50, bottom: 50, left: 50},
+      width = 960 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+
+  // 设置范围转换
+  var x = d3.scale.ordinal()
+      .rangeRoundBands([margin.left, width],0.5);
+  var y = d3.scale.linear()
+      .rangeRound([height,margin.top]);   //已经反过来设置了
+
+  // 生成x轴
+  var xAxis = d3.svg.axis()
+      .scale(x)    //传入尺度变换参数
+      .orient("bottom");
+
+  // y轴
+  var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left");
+
+  // 设置图形类别颜色
+  var colorRange = d3.scale.ordinal()
+    .range(["#2ca25f","#99d8c9"]);
+
+  // 生成svg
+  var svg = d3.select("#chart1").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // 读取csv并传入图表
+  d3.csv("survival_by_cabin.csv", function(data) {
+
+  		//已经全部读取进data里面了
+
+      var status = ["Survived_rate", "Perished_rate"];
+      	//创建数据层级
+      var rate_layers = d3.layout.stack()(status.map(function(temp) {
+      				//temp这里就是status中的值
+          return data.map(function(d) {
+          			//返回一个字典
+              return {x : d.Pclass,
+                 	 y : +d[temp] };
+                   //debugger;
+          });
+      }));
+
+      var count_status = ["Survived","Perished"]
+
+      var count_layers = d3.layout.stack()(count_status.map(function(temp) {
+      				//temp这里就是status中的值
+          return data.map(function(d) {
+          			//返回一个字典
+              return {x : d.Pclass,
+                 	 y : +d[temp] };
+                 
+          });
+      }));
+
+      debugger;
+
+      // 设置数据定义域和值域     x输入的是全部的ordinal变量
+      x.domain(rate_layers[0].map(function(d) { return d.x; }));
+      y.domain([0, 1]);
+
+      //创建堆积图 图层
+      var layer= svg.selectAll(".layer")
+              .data(rate_layers)
+              .enter()
+              .append("g")
+              .attr("class", "layer")
+              .style("fill", function(d, i) { return colorRange(i); });
+
+
+       //堆积Bar          layer中本身就有数据
+      var rect = layer.selectAll("rect")
+              .data(function(d) { return d;})
+              .enter()
+              .append("rect")
+              .attr("x", function(d) { return x(d.x); })
+              .attr("y", function(d) { return y(d.y + d.y0); })
+              .attr("height", function(d) { return y(d.y0) - y(d.y + d.y0); })
+              .attr("width", x.rangeBand())
+              //鼠标显示数值动画效果
+              .on("mouseover", function() { tooltip.style("display", null);})
+              .on("mousemove", function(d) {
+              					//根据鼠标的位置确定提示框的位置
+                  var xPosition = d3.mouse(this)[0] - 15;
+                  var yPosition = d3.mouse(this)[1] - 25;
+                  tooltip.attr("transform", "translate(" + xPosition + "," +
+                      yPosition + ")");
+                  tooltip.select("text").text("Ratio: "+d.y);})
+              .on("mouseout", function() { tooltip.style("display", "none");});
+
+      //debugger;
+
+      // 添加x轴和标签
+      svg.append("g")
+              .attr("class", "axis axis--x")
+              .call(xAxis)
+              .attr("transform", "translate(0," + height + ")")  //将坐标轴放置在底部
+              .append("text")
+              .attr("text-anchor","middle")
+              .attr("transform","translate("+(width/2)+","+margin.bottom+")")
+              .style("font-size",20)
+              .text("仓位等级");
+
+      // 添加y轴和标签
+      svg.append("g")
+              .attr("class", "axis axis--y")
+              .attr("transform","translate("+margin.left+","+0+")")
+              .call(yAxis)
+              .append("text")
+              .attr("text-anchor","end")
+              .attr("transform","translate("+(-margin.left)+","+(height/2-margin.bottom)+")rotate(-90)")
+              .style("font-size",20)
+              .text("乘客比例");
+
+      //  自定义提示框
+      var tooltip = svg.append("g")
+              .attr("class", "tooltip")
+              .style("display", "none");
+
+
+      tooltip.append("rect")
+              .attr("width", 65)
+              .attr("height", 20)
+              .attr("fill", "white")
+              .style("opacity", 0.5);
+      tooltip.append("text")
+              .attr("x", 30)
+              .attr("dy", "1.2em")
+              .style("text-anchor", "middle")
+              .attr("font-size", "12px")
+              .attr("font-weight", "bold");
+
+      // 为图表添加标题
+      var h2 = svg.append("text")
+              .text("泰坦尼克号乘客生还情况（按舱位等级分类）")
+              .attr("text-anchor","middle")
+              .attr("transform","translate("+(width+margin.left)/2+","+0+")")
+              .attr("class","header")
+              .attr("font-size",25);
+
+      // 添加图例
+      var legend = svg.selectAll(".legend")
+              .data(colorRange.domain().slice().reverse())
+              .enter()
+              .append("g")
+              .attr("class", "legend")
+              .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+      legend.append("rect")
+              .attr("x", width - 18)
+              .attr("width", 18)
+              .attr("height", 18)
+              .style("fill", colorRange)
+      legend.append("text")
+              .attr("x", width - 20)
+              .attr("y", 9)
+              .attr("dy", ".35em")
+              .style("text-anchor", "end")
+              .text(function(d, i) { switch (i) {
+                  case 0: return "Perished";
+                  case 1: return "Survived"; }});
+  });
+
+  // 图2
+  var margin = {top: 20, right: 50, bottom: 50, left: 50},
+      width = 960 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+  var x = d3.scale.ordinal()
+      .rangeRoundBands([margin.left, width],0.5);
+  var y = d3.scale.linear()
+      .rangeRound([height,margin.top]);
+  var xAxis = d3.svg.axis()
+      .scale(x)
+      .orient("bottom");
+  var colorRange2 = d3.scale.ordinal()
+    .range(["#756bb1","#bcbddc"]);
+  var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left");
+  var svg2 = d3.select("#chart2").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+  d3.csv("Survival_by_age.csv", function(data) {
+      var status = ["Survived_rate", "Perished_rate"];
+      var rate_layers = d3.layout.stack()(status.map(function(temp) {
+          return data.map(function(d) {
+              return {x : d.Age,
+                  y : +d[temp] };
+                
+          });
+
+      }));
+
+      x.domain(rate_layers[0].map(function(d) { return d.x; }));
+      y.domain([0, 1]);
+      var layer= svg2.selectAll(".layer")
+              .data(rate_layers)
+              .enter()
+              .append("g")
+              .attr("class", "layer")
+              .style("fill", function(d, i) { return colorRange2(i); });
+
+
+      var rect = layer.selectAll("rect")
+              .data(function(d) { return d;})
+              .enter()
+              .append("rect")
+              .attr("x", function(d) { return x(d.x); })
+              .attr("y", function(d) { return y(d.y + d.y0); })
+              .attr("height", function(d) { return y(d.y0) - y(d.y + d.y0); })
+              .attr("width", x.rangeBand())
+              .on("mouseover", function() { tooltip.style("display", null);})
+              .on("mousemove", function(d) {
+                  var xPosition = d3.mouse(this)[0] - 15;
+                  var yPosition = d3.mouse(this)[1] - 25;
+                  tooltip.attr("transform", "translate(" + xPosition + "," +
+                      yPosition + ")");
+                  tooltip.select("text").text("Ratio: "+d.y);
+
+              		})
+              .on("mouseout", function() { tooltip.style("display", "none");});
+      svg2.append("g")
+              .attr("class", "axis axis--x")
+              .call(xAxis)
+              .attr("transform", "translate(0," + height + ")")
+              .append("text")
+              .attr("text-anchor","middle")
+              .attr("transform","translate("+(width/2)+","+margin.bottom+")")
+              .style("font-size",20)
+              .text("年龄");
+      svg2.append("g")
+              .attr("class", "axis axis--y")
+              .attr("transform","translate("+margin.left+","+0+")")
+              .call(yAxis)
+              .append("text")
+              .attr("text-anchor","end")
+              .attr("transform","translate("+(-margin.left)+","+(height/2-margin.bottom)+")rotate(-90)")
+              .style("font-size",20)
+              .text("乘客比例");
+      var tooltip = svg2.append("g")
+              .attr("class", "tooltip")
+              .style("display", "none");
+      tooltip.append("rect")
+              .attr("width", 65)
+              .attr("height", 20)
+              .attr("fill", "white")
+              .style("opacity", 0.5);
+      tooltip.append("text")
+              .attr("x", 30)
+              .attr("dy", "1.2em")
+              .style("text-anchor", "middle")
+              .attr("font-size", "12px")
+              .attr("font-weight", "bold");
+      var h2 = svg2.append("text")
+              .text("泰坦尼克号乘客生还情况（按年龄分类）")
+              .attr("text-anchor","middle")
+              .attr("transform","translate("+(width+margin.left)/2+","+0+")")
+              .attr("class","header")
+              .attr("font-size",25);
+      var legend = svg2.selectAll(".legend")
+              .data(colorRange2.domain().slice().reverse())
+              .enter()
+              .append("g")
+              .attr("class", "legend")
+              .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+      legend.append("rect")
+              .attr("x", width - 18)
+              .attr("width", 18)
+              .attr("height", 18)
+              .style("fill", colorRange2)
+      legend.append("text")
+              .attr("x", width - 20)
+              .attr("y", 9)
+              .attr("dy", ".35em")
+              .style("text-anchor", "end")
+              .text(function(d, i) { switch (i) {
+                  case 0: return "Perished";
+                  case 1: return "Survived"; }});
+  });
+
+  // 图 3
+  var margin = {top: 50, right: 50, bottom: 50, left: 50},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+  var x = d3.scale.ordinal()
+          .rangeRoundBands([margin.left, width],0.65);
+  var y = d3.scale.linear()
+          .rangeRound([height,margin.top]);
+
+
+  var ColorRange3 = d3.scale.ordinal()
+          .range(["#636363", "#bdbdbd"]);
+  var ColorRange4 = d3.scale.ordinal()
+          .range(["#feb24c", "#ffeda0"]);
+
+
+  var legend_color = d3.scale.ordinal()
+          .range(["#636363", "#bdbdbd","#feb24c", "#ffeda0"]);
+
+
+  var xAxis = d3.svg.axis()
+          .scale(x)
+          .orient("bottom");
+  var yAxis = d3.svg.axis()
+          .scale(y)
+          .orient("left");
+
+  //每张图的svg是分离开的
+  var svg3 = d3.select("#chart3").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate("+margin.left+","+20+")");
+  d3.csv("Survival_by_class_and_gender.csv", function(data) {
+
+      //debugger;
+      var male_status = ["Male_Survived_Rate", "Male_Perished_Rate"];
+      var female_status = ["Female_Survived_Rate", "Female_Perished_Rate"];
+
+      //读取女性比例
+      var layers = d3.layout.stack()(female_status.map(function(c) {
+          return data.map(function(d) {
+              return {
+                  x : d.Pclass,
+                  y : +d[c],
+                  status : c
+              };
+          });
+      }));
+
+      //读取女性比例
+      var layers2 = d3.layout.stack()(male_status.map(function(c) {
+          return data.map(function(d) {
+              return {
+                  x : d.Pclass,
+                  y : +d[c],
+                  status : c
+              };
+          });
+      }));
+
+      //debugger;
+      x.domain(layers[0].map(function(d) { return d.x; }));
+      y.domain([0, d3.max(layers2[layers2.length - 1], function(d) { return d.y0 + d.y; })]).nice();
+
+      //添加html组块
+      var layer = svg3.selectAll(".layer")
+              .data(layers)
+              .enter()
+              .append("g")
+              .attr("class", "layer")
+              .style("fill", function(d, i) { return ColorRange3(i); });
+
+
+      var layer2 = svg3.selectAll(".layer2")
+              .data(layers2)
+              .enter()
+              .append("g")
+              .attr("class", "layer2")
+              .style("fill", function(d, i) { return ColorRange4(i); });
+
+
+      //添加女性图形
+      var rect =  layer.selectAll(".female_rect")
+              .data(function(d) { return d;})
+              .enter()
+              .append("rect")
+              .attr("class","female_rect")
+               //用这种方法可以并排展示  
+              .attr("x", function(d) { return (x(d.x)-x.rangeBand()/2);})  
+              .attr("y", function(d) { return y(d.y + d.y0);})
+              .attr("height", function(d) { return y(d.y0) - y(d.y + d.y0);})
+              .attr("width", x.rangeBand())
+              .on("mouseover", function() { tooltip.style("display", null);})
+              .on("mousemove", function(d) {
+                  var xPosition = d3.mouse(this)[0] - 15;
+                  var yPosition = d3.mouse(this)[1] - 25;
+                  tooltip.attr("transform", "translate(" + xPosition + "," + yPosition + ")");
+                  tooltip.select("text").text("Ratio: "+d.y);})
+              .on("mouseout", function() { tooltip.style("display", "none");})
+
+
+      //添加男性图形
+      var rect2 =  layer2.selectAll(".male_rect")
+              .data(function(d) { return d;})
+              .enter()
+              .append("rect")
+              .attr("class","male_rect")
+              .attr("x", function(d) { return x(d.x)+x.rangeBand()/2;})
+              .attr("y", function(d) { return y(d.y + d.y0);})
+              .attr("height", function(d) { return y(d.y0) - y(d.y + d.y0);})
+              .attr("width", x.rangeBand())
+              .on("mouseover", function() { tooltip.style("display", null);})
+              .on("mousemove", function(d) {
+                  var xPosition = d3.mouse(this)[0] - 15;
+                  var yPosition = d3.mouse(this)[1] - 25;
+                  tooltip.attr("transform", "translate(" + xPosition + "," + yPosition + ")");
+                  tooltip.select("text").text("Ratio: "+d.y);})
+              .on("mouseout", function() { tooltip.style("display", "none");})
+
+      svg3.append("g")
+              .attr("class", "axis axis--x")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis)
+              .append("text")
+              .attr("text-anchor","middle")
+              .attr("transform","translate("+width/2+","+margin.bottom+")")
+              .style("font-size",20)
+              .text("舱位等级");
+      svg3.append("g")
+              .attr("class", "axis axis--y")
+              .attr("transform","translate("+margin.left+","+0+")")
+              .call(yAxis)
+              .append("text")
+              .attr("text-anchor","end")
+              .attr("transform","translate("+(-margin.left)+","+(height/2-margin.bottom)+")rotate(-90)")
+              .style("font-size",20)
+              .text("乘客比例");
+      var h2 = svg3.append("text")
+              .text("泰坦尼克号乘客生还情况（按性别和舱位等级分类）")
+              .attr("text-anchor","middle")
+              .attr("transform","translate("+(width+margin.left)/2+","+0+")")
+              .attr("class","header")
+              .attr("font-size",25);
+      var legend = svg3.selectAll(".legend")
+              .data([0,1,2,3])
+              .enter()
+              .append("g")
+              .attr("class", "legend")
+              .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+      legend.append("rect")
+              .attr("x", width)
+              .attr("width", 25)
+              .attr("height", 18)
+              .style("fill", function(d, i) { return legend_color(i);});
+      legend.append("text")
+              .attr("x", width - 5)
+              .attr("y", 9)
+              .attr("dy", ".35em")
+              .style("text-anchor", "end")
+              .text(function(d, i) { switch (i) {
+                  case 0: return "Female: Survived";
+                  case 1: return "Female: Perished";
+                  case 2: return "Male: Survived";
+                  case 3: return "Male: Perished";}});
+      var tooltip = svg3.append("g")
+              .attr("class", "tooltip")
+              .style("display", "none");
+      tooltip.append("rect")
+              .attr("width", 65)
+              .attr("height", 20)
+              .attr("fill", "white")
+              .style("opacity", 0.5);
+      tooltip.append("text")
+              .attr("x", 30)
+              .attr("dy", "1.2em")
+              .style("text-anchor", "middle")
+              .attr("font-size", "12px")
+              .attr("font-weight", "bold");
+  });
+  </script>
+
+</body>
+
+</html>
