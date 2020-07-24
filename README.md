@@ -1,2 +1,2 @@
 # Udacity-Data-Analyst-Advanced
- Udacity Data Analyst Advanced Nanodegree
+ This repository includes all the projects I finished during the Udacity Data Analyst Advanced Nanodegree
