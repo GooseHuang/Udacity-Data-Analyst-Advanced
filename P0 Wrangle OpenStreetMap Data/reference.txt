@@ -1,0 +1,15 @@
+Cerberus Usage
+http://docs.python-cerberus.org/en/stable/usage.html#basic-usage
+
+Import a CSV File Into an SQLite Table
+http://www.sqlitetutorial.net/sqlite-import-csv/
+
+
+OpenStreetMap Data Case Study 示例项目
+https://s3.cn-north-1.amazonaws.com.cn/static-documents/nd002/sample_project_en.pdf
+
+
+udacity-dand
+https://github.com/davidventuri/udacity-dand/blob/master/p3/process_osm.py
+
+toolkit.py是我在实习时写的函数库，这里直接调用了
